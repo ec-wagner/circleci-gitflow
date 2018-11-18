@@ -63,6 +63,9 @@ jobs:
           #     POSTGRES_USER: postgres
           #     POSTGRES_DB: circle_test
           #     POSTGRES_PASSWORD: ""
+                # Customize the JVM maximum heap limit
+                #JVM_OPTS: -Xmx3200m
+                #TERM: dumb
 
         # build steps
         steps:
