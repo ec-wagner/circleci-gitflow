@@ -1,5 +1,5 @@
 robotframework==3.0.4
-requests==2.19.1
+requests==2.20.0
 robotframework-requests==0.4.7
 jsonpath-ng==1.4.3
 flex==6.13.2
