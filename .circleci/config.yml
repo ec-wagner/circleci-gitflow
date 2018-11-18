@@ -6,7 +6,7 @@ workflows:
                 filters:
                     branches:
                         only:
-                            - dev
+                            - develop
                             - /feature/.*/
 
             - test:
@@ -15,7 +15,7 @@ workflows:
                 filters:
                     branches:
                         only:
-                            - dev
+                            - develop
                             - /feature/.*/
                 
 
