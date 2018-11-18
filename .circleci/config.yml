@@ -1,0 +1,190 @@
+workflows:
+    version: 2
+    build-and-test-wf:
+        jobs:
+            - build:
+                filters:
+                    branches:
+                        only:
+                            - dev
+                            - /feature/.*/
+
+            - test:
+                requires:
+                    - build
+                filters:
+                    branches:
+                        only:
+                            - dev
+                            - /feature/.*/
+                
+
+    publish-release-wf:
+        jobs:
+            - build:
+                filters:
+                    branches:
+                        ignore: /.*/
+                    tags:
+                        only: /^\d+\.\d+\.\d+$/
+
+            - test:
+                requires:
+                    - build
+                filters:
+                    branches:
+                        ignore: /.*/
+                    tags:
+                        only: /^\d+\.\d+\.\d+$/
+
+            - release:
+                requires:
+                    - build
+                    - test
+                filters:
+                    branches:
+                        ignore: /.*/
+                    tags:
+                        only: /^\d+\.\d+\.\d+$/
+                
+
+            # - publish-release_stage
+
+version: 2
+jobs:
+    build:
+        working_directory: ~/code
+        # executer: docker, linux VM, mac VM
+        docker:
+            - image: circleci/openjdk:8-jdk    # primary image 8-jdk-browsers
+              # TEST_DATABASE_URL: postgresql://root@localhost/circle_test?sslmode=disable
+          # - image: circleci/postgres:9-alpine
+          #   environment:
+          #     POSTGRES_USER: postgres
+          #     POSTGRES_DB: circle_test
+          #     POSTGRES_PASSWORD: ""
+
+        # build steps
+        steps:
+            - checkout
+
+            # Download and cache dependencies
+            # - restore_cache:
+            #     keys:
+            #     - javadependencies-{{ checksum "build.gradle" }}
+            #     # fallback to using the latest cache if no exact match is found
+            #     - javadependencies-
+
+            # - restore_cache:
+            #     keys:
+            #     - pythodependencies-{{ checksum "pip.lock" }}
+            #     - pythodependencies-
+
+            #- run: gradle dependencies    # listet sie nur! kein download!
+
+            # - save_cache:
+            #     paths:
+            #         - ~/code/.gradle
+            #     key: javadependencies-{{ checksum "build.gradle" }}
+
+            # - save_cache:
+            #     paths:
+            #         - ~/code/venv
+            #     key: pythodependencies-{{ checksum "pip.lock" }}
+
+            # Compile code and run unit tests
+
+            - run:
+                name: Run Unit Tests
+                command: gradle test
+
+            - store_test_results:
+                path: ~/code/build/test-results/test
+                # index.html hast some interessting reports
+                # think about uploading this files to a http server
+
+            - persist_to_workspace:
+                root: ~/code
+                paths:
+                    - ./*
+
+    test:
+        working_directory: ~/code
+        docker:
+            - image: circleci/openjdk:8-jdk
+              environment:
+                  DOCKERIZE_VERSION: v0.6.1
+
+        steps:
+            - attach_workspace:
+                at: ~/code
+
+            ## Robotframework environment setup
+            # - run: python3 -m pip install --user pipenv
+            # - run: pipenv --version
+            # - run: pipenv --python 3.5
+            # - run: pipenv shell
+            # - run: sudo pip3 install virtualenv
+            # - run: virtualenv -p python3 venv
+            # - run: . venv/bin/activate
+            # - run: ls -la
+            # - run: deactivate
+
+            # - run:
+            #     name: Setup RF environment
+            #     command: |
+            #         sudo apt install python3 python3-pip
+            #         pip3 install -r rf_requirements.txt
+            #         pip3 freeze > pip.lock
+
+            # Run application and execute integration tests
+            - run:
+                name: Run Application
+                command: gradle bootRun
+                # no_output_timeout: 1m
+                background: true
+
+            # - run:
+            #     name: install dockerize    # need this to enable waiting for Webserver
+            #     command: |
+            #         wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+            #         tar -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+            #         rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+
+            - run:
+                name: Wait for Application to start
+                command: dockerize -wait http://localhost:8080 -timeout 1m
+
+            # ROBOTFRAMEWORK TESTS
+            # - run:
+            #     name: Run Integration Tests
+            #     command: |
+            #         ~/.local/bin/robot -d ./build/test-results/robot src/test/robot/API.robot
+
+            - run: curl localhost:8080    # should return Hello World
+
+            # - store_test_results:
+            #     path: ~/code/build/test-results/test
+            # - store_test_results:
+            #     path: ~/code/build/test-results/robot
+
+            - persist_to_workspace:
+                root: ~/code
+                paths:
+                    - ./*
+
+            # Clean Up
+            # - run: gradle clean
+
+    release:
+        working_directory: ~/code
+        docker:
+            - image: circleci/openjdk:8-jdk
+        steps:
+            - attach_workspace:
+                at: ~/code
+
+            - run:
+                name: Publish Release
+                command: |
+                    echo "Wie gehts weiter?"
